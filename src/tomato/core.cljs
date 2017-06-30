@@ -3,31 +3,46 @@
             [cljs.js]
             [promesa.core :as p :include-macros true]
             [replumb.common]
+            [cljsjs.parinfer]
 
             [tomato.eval :as ev]
-            [linked.core :as linked]))
+            [linked.core :as linked]
+            ))
 
 (enable-console-print!)
 
+(defn indexed-by [key forms]
+  (into (linked.core/map) (for [f forms]
+                            [(key f) f])))
 
-(defonce app-state
-         (atom
-           {:forms (linked/map
-                     'circle {:form '(defn circle [r [cx cy]]
-                                       [:circle {:r  r
-                                                 :cx cx
-                                                 :cy cy}])}
-                     (gensym) {:form '(circle 10 [10 20] 1)}
-                     (gensym) {:form '(ciarcle 10 [16 25])})}))
+(defonce code-state
+         (atom {:snippets (indexed-by :sym
+                                      (map #(assoc % :sym (gensym)
+                                                     :source (:source (:code %)))
+                                           (ev/split-to-forms
+                                             "
+                    (defn circle [r [cx cy]]
+                     [:circle {:r  r
+                               :cx cx
+                               :cy cy}])
+
+                    (circle 10 [10 20] 1)
+                    (ciarcle 10 [16 25])
+
+                    ")))}))
+
+(defonce selected-forms
+         (atom nil))
+
 
 (def element-values
   (ev/async-map-atom ::element-values
                      (fn [state]
                        (p/map
                          #(into (linked.core/map)
-                                (map vector (keys (:forms state)) %))
-                         (ev/eval-forms (map (comp :form second) (:forms state)))))
-                     app-state))
+                                (map vector (keys (:snippets state)) %))
+                         (ev/eval-sources (map (comp :source second) (:snippets state)))))
+                     code-state))
 
 (defn maybe-read [str]
   (try
@@ -43,6 +58,24 @@
     nil))
 
 
+(rum/defc movable-circle [[x y] cb]
+  [:circle {:cx     x
+            :cy     y
+            :r      5
+            :fill   "red"
+            :stroke "red"}])
+
+
+(rum/defc selected-elements < rum/reactive []
+  (let [els (rum/react selected-forms)]
+    [:g
+     (for [{:keys [form] :as e} els]
+       (cond
+         (and (vector? form) (= (count form) 2)) (movable-circle form println)
+         :default nil))]))
+
+
+
 (rum/defc drawing-area < rum/reactive []
   [:svg
    {:style {:border "1px solid" :width "99%" :height "100%"}}
@@ -51,12 +84,15 @@
      (try
        (maybe-figure key (:value e))
        (catch js/Error e
-         nil)))])
+         nil)))
+
+   (selected-elements)])
+
 
 (defn show-success [v]
   [:pre {:style {:background-color "#b0f0a6"
                  :max-height       "5em"}}
-   (:value v)])
+   (str "=> " (:value v))])
 
 (defn show-fail [v]
   [:pre {:style {:background-color "#fe7c66"
@@ -70,18 +106,46 @@
     (:success? v) (show-success v)
     :default (show-fail v)))
 
-(rum/defc form-editor < rum/reactive {:key-fn #(identity %)}
+(defn line-count [code]
+  (inc (count (filter #(= % "\n") code))))
+
+
+(defn get-selection [el]
+  (if el
+    [(.-selectionStart el)
+     (.-selectionEnd el)]
+    nil))
+
+
+(defn set-selection! [el sel]
+  (when (and el sel)
+    (set! (.-selectionStart el) (first sel))
+    (set! (.-selectionEnd el) (second sel))))
+
+
+(defn handle-select [key source [start end]]
+  (reset! selected-forms (map #(assoc % :snippet key)
+                              (ev/forms-around-pos source start))))
+
+
+(rum/defc form-editor < rum/reactive
   [key form-atom value-atom]
-  (let [change-code! (fn [v]
-                       (swap! form-atom assoc :form v))
+  (println @form-atom)
+  (let [change-source! (fn [v]
+                         (swap! form-atom assoc :source v))
         form (rum/react form-atom)
+        source (:source form)
         result (rum/react value-atom)
         error? (not (or (nil? result) (:success? result)))]
     [:div {:style {:margin-bottom "10px"}}
      [:textarea
-      {:style     {:width "100%" :height "100%" :display "block" :box-sizing "border-box"}
-       :on-change #(change-code! (.. % -target -value))
-       :value     (str (:form form))}]
+      {:style     {:width      "100%"
+                   :height     (-> source line-count inc (* 1.1) (min 10) (str "em"))
+                   :display    "block"
+                   :box-sizing "border-box"}
+       :on-change #(change-source! (.. % -target -value))
+       :on-select #(handle-select key source (get-selection (.-target %)))
+       :value     source}]
      [:div
       (if (:warning result)
         [:pre
@@ -92,17 +156,23 @@
 
 (rum/defc code-editor < rum/reactive []
   [:div
-   (for [form (:forms (rum/react app-state))]
-     (form-editor
-       (first form)
-       (rum/cursor-in app-state [:forms (first form)])
-       (rum/cursor-in element-values [(first form)])))])
+   (for [[key form] (:snippets (rum/react code-state))]
+     (rum/with-key
+       (form-editor
+         key
+         (rum/cursor-in code-state [:snippets key])
+         (rum/cursor-in element-values [key]))
+       key))])
 
+
+(rum/defc dbg-atom < rum/reactive [a]
+  [:div (str (rum/react a))])
 
 (rum/defc app-area []
-  [:div {:style {:display "flex" :height "300px"}}
-   [:div {:style {:flex "0 0 65%"}} (drawing-area)]
-   [:div {:style {:flex "1 1 35%" :width "200px"}} (code-editor)]])
+  [:div {:style {:display "flex" :flex-flow "row wrap" :height "300px"}}
+   [:div {:style {:flex "0 0 45%"}} (drawing-area)]
+   [:div {:style {:flex "1 1 55%" :width "200px"}} (code-editor)]
+   [:div {:style {:order "2"}} (dbg-atom selected-forms)]])
 
 
 (rum/mount
@@ -114,5 +184,5 @@
   ;; your application
   ;; (swap! app-state update-in [:__figwheel_counter] inc)
 
-  (println (:elements @app-state))
+  (println (:elements @code-state))
   )

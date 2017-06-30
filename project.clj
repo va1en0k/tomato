@@ -16,7 +16,9 @@
                  [com.cognitect/transit-cljs "0.8.239"]
 
                  [funcool/promesa "1.8.1"]
-                 [frankiesardo/linked "1.2.9"]]
+                 [frankiesardo/linked "1.2.9"]
+
+                 [cljsjs/parinfer "2.0.0-0"]]
 
   :plugins [[lein-figwheel "0.5.10"]
             [lein-cljsbuild "1.1.5" :exclusions [[org.clojure/clojure]]]]
