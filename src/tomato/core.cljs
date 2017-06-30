@@ -9,27 +9,45 @@
 
 (defonce app-state
          (atom
-           {:elements ['(f/square)]}))
+           {:code "
+           (ns tomato.user
+            (:require [tomato.figures :as f]))
+
+           (+ 1 2)
+
+           (def sq (f/square))
+
+           "}))
 
 (defonce element-values (ev/async-map-atom ::element-values
-                                           (comp ev/eval-elements :elements)
+                                           (comp ev/eval-code :code)
                                            app-state))
 
 (rum/defc drawing-area < rum/reactive []
-  (println (rum/react element-values))
-          [:svg ;{:width "600px" :height "200px"}
-           (for [e (:elements (rum/react element-values))]
+  [:svg
+   {:style {:border "1px solid" :width "99%" :height "100%"}}
 
-                  [:text (str e)]
+   (for [e (rum/react element-values)]
+     (try
+       (cljs.reader/read-string (:value e))
+       (catch js/Error e
+         nil)))])
 
-                  )])
+;[:textarea ]
+
+(rum/defc code-editor < rum/reactive []
+  (let [change-code (fn [v]
+                      (swap! app-state assoc :code v))]
+    [:textarea
+     {:style     {:width "100%" :height "100%"}
+      :on-change #(change-code (.. % -target -value))}
+     (:code (rum/react app-state))]))
 
 (rum/defc app-area []
-  [:div {:style {:display "flex"}}
-
+  [:div {:style {:display "flex" :height "300px"}}
 
    [:div {:style {:flex "0 0 65%"}} (drawing-area)]
-   [:div {:style {:flex "1"}} "hi"]
+   [:div {:style {:flex "1"}} (code-editor)]
 
    ])
 

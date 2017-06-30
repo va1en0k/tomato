@@ -1,36 +1,35 @@
 (ns tomato.eval
-  (:require [promesa.core :as p :include-macros true]
-            [tomato.figures]))
+  (:require [cljs.reader]
+            [promesa.core :as p :include-macros true]
+            [replumb.core :as rpl]
+            [tomato.eval.io]))
 
-
-
-(defn eval-form [form state]
+(defn eval-str [s]
   (p/promise
     (fn [resolve reject]
-      (binding [cljs.js/*eval-fn* #(do (println %) (cljs.js/js-eval %))
-                cljs.js/*load-fn* #()]
-        (println form)
-        (cljs.js/eval state form {:ns      'tomato.user
-                                  :context :statement}
-                      #(do
-                         (println %1 %2)
-                         (println @state)
-                         (resolve %1)))))))
+      (println "EVAL STR:" s)
+      (rpl/read-eval-call
+        (rpl/options :browser
+                     ["/src/cljs" "/js/compiled/out"]
+                     tomato.eval.io/fetch-file!)
+        resolve
+        ;#(if (rpl/success? %)
+        ;   (resolve %)
+        ;   (reject %))
+        s))))
 
+(defn sequential-async-map [f coll]
+  (if (empty? coll)
+    (p/promise [])
+    (p/alet [fs (p/await (f (first coll)))
+             rs (p/await (sequential-async-map f (rest coll)))]
+            (cons fs rs))))
 
-(defn eval-forms
-  ([elements] (eval-forms elements (atom)))
-  ([elements state]
-   (if (empty? elements)
-     (p/promise [])
-     (p/alet [fs (p/await (eval-form (first elements) state))
-              rs (p/await (eval-forms (rest elements) state))]
-             (cons fs rs)))))
+(defn eval-code [code]
+  (sequential-async-map
+    eval-str
+    (map str (cljs.reader/read-string (str "[" code "\n]")))))
 
-(defn eval-elements [elements]
-  (eval-forms (cons '(ns tomato.user
-                       (:require [tomato.figures :as f]))
-                    elements)))
 
 (defn async-map-atom [key f a]
   ;; f : value -> promise
