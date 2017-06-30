@@ -25,10 +25,21 @@
              rs (p/await (sequential-async-map f (rest coll)))]
             (cons fs rs))))
 
-(defn eval-code [code]
+
+(defn code-to-forms [code]
+  (cljs.reader/read-string (str "[" code "\n]")))
+
+(defn eval-forms [forms]
+  (println "damin?" forms)
   (sequential-async-map
     eval-str
-    (map str (cljs.reader/read-string (str "[" code "\n]")))))
+    (map str forms)))
+
+(defn eval-code [code]
+  (eval-forms (code-to-forms code)))
+
+
+
 
 
 (defn async-map-atom [key f a]

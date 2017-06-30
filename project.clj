@@ -15,7 +15,8 @@
                  [replumb "0.2.4"]
                  [com.cognitect/transit-cljs "0.8.239"]
 
-                 [funcool/promesa "1.8.1"]]
+                 [funcool/promesa "1.8.1"]
+                 [frankiesardo/linked "1.2.9"]]
 
   :plugins [[lein-figwheel "0.5.10"]
             [lein-cljsbuild "1.1.5" :exclusions [[org.clojure/clojure]]]]
