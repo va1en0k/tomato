@@ -108,8 +108,9 @@
     [:g
      (for [[key {:keys [form] :as e}] els]
        (cond
-         (and (vector? form) (= (count form) 2))
+         (and (vector? form) (= (count form) 2) (every? number? form))
          (movable-circle key drag-n-drop-target form #(replace-form! key %))
+
          :default nil))]))
 
 (defn get-mouse-position-in-svg [e]
