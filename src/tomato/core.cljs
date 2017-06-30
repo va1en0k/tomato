@@ -31,8 +31,10 @@
 
                     ")))}))
 
-(defonce selected-forms
-         (atom nil))
+(defonce cursor (atom nil))
+
+;(defonce selected-forms
+;         (atom nil))
 
 
 (def element-values
@@ -53,32 +55,80 @@
 
 (defn maybe-figure [key str]
   (if-let [v (maybe-read str)]
-    (do (println str)
-        [:g {:key key} v])
+    [:g {:key key} v]
     nil))
 
-
-(rum/defc movable-circle [[x y] cb]
-  [:circle {:cx     x
-            :cy     y
-            :r      5
-            :fill   "red"
-            :stroke "red"}])
+(def keyed-by-first-arg {:key-fn #(identity %)})
 
 
-(rum/defc selected-elements < rum/reactive []
-  (let [els (rum/react selected-forms)]
+(defn get-selected-forms [code-state cursor]
+  (when-let [[snp-key [start _]] cursor]
+    (when-let [{:keys [source]} (snp-key (:snippets code-state))]
+      (indexed-by #(map % [:snippet :pos])
+                  (map #(assoc % :snippet snp-key)
+                       (ev/forms-around-pos source start))))))
+
+(defn handle-select [key [start end]]
+  (reset! cursor [key [start end]]))
+
+(rum/defc movable-circle < keyed-by-first-arg rum/reactive
+  [key drag-n-drop-target [x y] cb]
+  (let [color (if (= (first (rum/react drag-n-drop-target)) key)
+                "red"
+                "green")
+        on-change cb]
+    [:circle {:cx            x
+              :cy            y
+              :r             5
+              :fill          color
+              :stroke        color
+              :on-mouse-down #(reset! drag-n-drop-target [key on-change])}]))
+
+(defn replace-form! [key new-value]
+  ;(println key new-value)
+  (when-let [{:keys [snippet pos] old-form-source :source} ((get-selected-forms @code-state @cursor) key)]
+    (when-let [{:keys [source]} (snippet (:snippets @code-state))]
+      (let [new-source (str
+                         (subs source 0 pos)
+                         new-value
+                         (subs source (+ pos (count old-form-source))))]
+        (println source)
+        (println new-source)
+        (println old-form-source "->" (str new-value))
+        (swap! code-state assoc-in
+               [:snippets snippet :source]
+               new-source)
+        ;(handle-select snippet [pos pos])
+        ))))
+
+(rum/defc selected-elements < rum/reactive
+  [drag-n-drop-target]
+
+  (let [els (get-selected-forms (rum/react code-state) (rum/react cursor))]
     [:g
-     (for [{:keys [form] :as e} els]
+     (for [[key {:keys [form] :as e}] els]
        (cond
-         (and (vector? form) (= (count form) 2)) (movable-circle form println)
+         (and (vector? form) (= (count form) 2))
+         (movable-circle key drag-n-drop-target form #(replace-form! key %))
          :default nil))]))
 
+(defn get-mouse-position-in-svg [e]
+  (let [svg (loop [el (.-target e)]
+              (if (= "svg" (.-tagName el))
+                el
+                (recur (.-parentNode el))))
+        bounds (.getBoundingClientRect svg)]
+    [(- (.. e -clientX) (.-left bounds))
+     (- (.. e -clientY) (.-top bounds))]))
 
 
-(rum/defc drawing-area < rum/reactive []
+(rum/defcs drawing-area < rum/reactive (rum/local nil ::drag-n-drop-target)
+  [{::keys [drag-n-drop-target]}]
   [:svg
-   {:style {:border "1px solid" :width "99%" :height "100%"}}
+   {:style         {:border "1px solid" :width "99%" :height "100%"}
+    :on-mouse-up   #(reset! drag-n-drop-target nil)
+    :on-mouse-move #(when-let [[key cb] @drag-n-drop-target]
+                      (cb (get-mouse-position-in-svg %)))}
 
    (for [[key e] (rum/react element-values)]
      (try
@@ -86,18 +136,19 @@
        (catch js/Error e
          nil)))
 
-   (selected-elements)])
+   (selected-elements drag-n-drop-target)])
 
 
 (defn show-success [v]
   [:pre {:style {:background-color "#b0f0a6"
-                 :max-height       "5em"}}
+                 :max-height       "5em"
+                 :padding          "2px"}}
    (str "=> " (:value v))])
 
 (defn show-fail [v]
   [:pre {:style {:background-color "#fe7c66"
-                 :max-height       "5em"}}
-   (println v)
+                 :max-height       "5em"
+                 :padding          "2px"}}
    (replumb.common/extract-message true (:error v))])
 
 (defn show-result [v]
@@ -123,14 +174,10 @@
     (set! (.-selectionEnd el) (second sel))))
 
 
-(defn handle-select [key source [start end]]
-  (reset! selected-forms (map #(assoc % :snippet key)
-                              (ev/forms-around-pos source start))))
 
 
 (rum/defc form-editor < rum/reactive
   [key form-atom value-atom]
-  (println @form-atom)
   (let [change-source! (fn [v]
                          (swap! form-atom assoc :source v))
         form (rum/react form-atom)
@@ -144,7 +191,7 @@
                    :display    "block"
                    :box-sizing "border-box"}
        :on-change #(change-source! (.. % -target -value))
-       :on-select #(handle-select key source (get-selection (.-target %)))
+       :on-select #(handle-select key (get-selection (.-target %)))
        :value     source}]
      [:div
       (if (:warning result)
@@ -172,7 +219,8 @@
   [:div {:style {:display "flex" :flex-flow "row wrap" :height "300px"}}
    [:div {:style {:flex "0 0 45%"}} (drawing-area)]
    [:div {:style {:flex "1 1 55%" :width "200px"}} (code-editor)]
-   [:div {:style {:order "2"}} (dbg-atom selected-forms)]])
+   ;[:div {:style {:order "2"}} (dbg-atom selected-forms)]
+   ])
 
 
 (rum/mount
@@ -184,5 +232,4 @@
   ;; your application
   ;; (swap! app-state update-in [:__figwheel_counter] inc)
 
-  (println (:elements @code-state))
   )

@@ -11,7 +11,7 @@
 (defn eval-str [s]
   (p/promise
     (fn [resolve reject]
-      (println "EVAL STR:" s)
+      ;(println "EVAL STR:" s)
       (rpl/read-eval-call
         (rpl/options :browser
                      ["/src/cljs" "/js/compiled/out"]
@@ -39,7 +39,6 @@
 
 
 (defn eval-sources [sources]
-  (println "damin?" sources)
   (sequential-async-map
     eval-str
     (map str sources)))
