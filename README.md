@@ -5,7 +5,7 @@ A programmer's interactive graphics editor.
 ## Overview
 
 
-    Well, as a programmer, those big Adobe Illustrator-type pieces of apocalyptic
+  Well, as a programmer, those big Adobe Illustrator-type pieces of apocalyptic
   junk have always intimidated me; then there is Processing, which requires of me
   more spatial intuition than I have, as well as too much willingness to put up with
   imperative API... I like to describe stuff with my programmer's words, but I'm bad
