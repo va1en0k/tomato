@@ -6,6 +6,24 @@ FIXME: Write a one-line description of your library/project.
 
 FIXME: Write a paragraph about the library/project and highlight its goals.
 
+## Todos
+
+* Library features
+** satisfies vs extends???
+
+* Editor features
+** Time
+** Randomness
+
+* Architecture
+** Decouple the library from the editor
+
+* Performance
+** Don't re-eval the unchanged
+** Debounce evals
+** Put evals into workers
+** Maybe find thus a way to interrupt a computation
+
 ## Setup
 
 To get an interactive development environment run:

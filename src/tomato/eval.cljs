@@ -6,21 +6,31 @@
             [clojure.string :as string]
             [promesa.core :as p :include-macros true]
             [replumb.core :as rpl]
-            [tomato.eval.io]))
+            [tomato.eval.io]
+            [tomato.repl]))
+
 
 (defn eval-str [s]
   (p/promise
     (fn [resolve reject]
       ;(println "EVAL STR:" s)
       (rpl/read-eval-call
-        (rpl/options :browser
+        (assoc
+          (rpl/options :browser
                      ["/src/cljs" "/js/compiled/out"]
                      tomato.eval.io/fetch-file!)
+          :preloads {:require '#{[tomato.figures :as f] tomato.repl}
+                     ;:use '#{their-ns}
+                     ;:cb #(println "Result:" %)
+                     ;:ns 'tomato.user
+                     })
         resolve
         ;#(if (rpl/success? %)
         ;   (resolve %)
         ;   (reject %))
-        s))))
+        ;(str "(tomato.repl/handle-upper-form " s ")")
+        s
+        ))))
 
 (defn sequential-async-map [f coll]
   (if (empty? coll)
@@ -32,10 +42,10 @@
 (defn code-to-forms [code]
   (cljs.reader/read-string (str "[" code "\n]")))
 
-(defn eval-forms [forms]
-  (sequential-async-map
-    eval-str
-    (map str forms)))
+;(defn eval-forms [forms]
+;  (sequential-async-map
+;    eval-str
+;    (map str forms)))
 
 
 (defn eval-sources [sources]
@@ -43,8 +53,8 @@
     eval-str
     (map str sources)))
 
-(defn eval-code [code]
-  (eval-forms (code-to-forms code)))
+;(defn eval-code [code]
+;  (eval-forms (code-to-forms code)))
 
 (defn split-to-forms [code]
   (loop [rr (rt/source-logging-push-back-reader code)

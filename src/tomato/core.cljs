@@ -4,10 +4,10 @@
             [promesa.core :as p :include-macros true]
             [replumb.common]
             [cljsjs.parinfer]
+            [linked.core :as linked]
 
             [tomato.eval :as ev]
-            [linked.core :as linked]
-            ))
+            [tomato.figures :as f]))
 
 (enable-console-print!)
 
@@ -21,6 +21,9 @@
                                                      :source (:source (:code %)))
                                            (ev/split-to-forms
                                              "
+                    (ns tomato.user
+                      (:require [tomato.figures :as f]))
+
                     (defn circle [r [cx cy]]
                      [:circle {:r  r
                                :cx cx
@@ -29,12 +32,11 @@
                     (circle 10 [10 20] 1)
                     (ciarcle 10 [16 25])
 
+                    (f/->OneBezier [10 10] [39 73] [145 34] [206 16])
+
                     ")))}))
 
 (defonce cursor (atom nil))
-
-;(defonce selected-forms
-;         (atom nil))
 
 
 (def element-values
@@ -46,6 +48,7 @@
                          (ev/eval-sources (map (comp :source second) (:snippets state)))))
                      code-state))
 
+
 (defn maybe-read [str]
   (try
     (cljs.reader/read-string str)
@@ -54,9 +57,9 @@
 
 
 (defn maybe-figure [key str]
-  (if-let [v (maybe-read str)]
-    [:g {:key key} v]
-    nil))
+  (when-let [v (maybe-read str)]
+    [:g {:key key} v]))
+
 
 (def keyed-by-first-arg {:key-fn #(identity %)})
 
@@ -68,11 +71,14 @@
                   (map #(assoc % :snippet snp-key)
                        (ev/forms-around-pos source start))))))
 
+
 (defn handle-select [key [start end]]
   (reset! cursor [key [start end]]))
 
+
 (rum/defc movable-circle < keyed-by-first-arg rum/reactive
   [key drag-n-drop-target [x y] cb]
+
   (let [color (if (= (first (rum/react drag-n-drop-target)) key)
                 "red"
                 "green")
