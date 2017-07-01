@@ -118,7 +118,7 @@
     [:circle {:cx            x
               :cy            y
               :r             5
-              :fill          color
+              :fill          "rgba(0,0,0,0)"
               :stroke        color
               :on-mouse-down #(reset! drag-n-drop-target [key on-change])}]))
 
