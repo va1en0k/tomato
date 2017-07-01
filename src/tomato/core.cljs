@@ -160,14 +160,17 @@
     (filter
       some?
       (for [[key {:keys [form] :as f}] (reverse selected-forms)]
-        (cond
-          (and (vector? form) (= (count form) 2) (every? number? form))
-          (movable-circle key form drag-n-drop-target #(replace-form! key %))
+        (try
+          (cond
+            (and (vector? form) (= (count form) 2) (every? number? form))
+            (movable-circle key form drag-n-drop-target #(replace-form! key %))
 
-          (and (list? form) (= (name (first form)) "bezier")) ; (every? #(and (vector %) (= (count %) 2)) (rest form)))
-          (movable-bezier key form drag-n-drop-target #(replace-form! key %))
+            (and (list? form) (= (name (first form)) "bezier")) ; (every? #(and (vector %) (= (count %) 2)) (rest form)))
+            (movable-bezier key form drag-n-drop-target #(replace-form! key %))
 
-          :default nil)))))
+            :default nil)
+          (catch js/Error e
+            nil))))))
 
 
 (rum/defc selected-elements < rum/reactive
