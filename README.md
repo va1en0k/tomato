@@ -33,6 +33,8 @@ A programmer's interactive graphics editor.
 
 * Editor features
     * ~~Hover code cell to highlight~~
+    * change movable selection finder to use clojure.spec
+    * movable selection for vector arithmetics
     * Time
     * Randomness
     * Color

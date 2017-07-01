@@ -130,9 +130,9 @@
                          (subs source 0 pos)
                          new-value
                          (subs source (+ pos (count old-form-source))))]
-        (println source)
-        (println new-source)
-        (println old-form-source "->" (str new-value))
+        ;(println source)
+        ;(println new-source)
+        ;(println old-form-source "->" (str new-value))
         (swap! code-state assoc-in
                [:snippets snippet :source]
                new-source)
@@ -155,7 +155,7 @@
           (filter #(and (vector? (vs %)) (= (count (vs %)) 2)) order))]))
 
 (defn get-movable-selection-handler [selected-forms drag-n-drop-target]
-  (println (reverse selected-forms))
+  ;(println (reverse selected-forms))
   (first
     (filter
       some?
