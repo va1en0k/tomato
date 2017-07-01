@@ -5,6 +5,7 @@
             [replumb.common]
             [cljsjs.parinfer]
             [linked.core :as linked]
+            [clojure.string]
 
             [tomato.eval :as ev]
             [tomato.figures :as f]))
@@ -15,26 +16,33 @@
   (into (linked.core/map) (for [f forms]
                             [(key f) f])))
 
+(defn remove-common-indent [code]
+  (let [lines (clojure.string/split-lines code)
+        not-empty-lines (filter (complement clojure.string/blank?) lines)
+        whitespace-lengths (map #(count (take-while clojure.string/blank? %)) not-empty-lines)
+        common (apply min whitespace-lengths)]
+    (clojure.string/join "\n" (map #(subs % common) lines))))
+
 (defonce code-state
          (atom {:snippets (indexed-by :sym
                                       (map #(assoc % :sym (gensym)
                                                      :source (:source (:code %)))
-                                           (ev/split-to-forms
-                                             "
-                    (ns tomato.user
-                      (:require [tomato.figures :as f]))
+                                           (ev/split-to-forms (remove-common-indent
+                                                                "
+                                       (ns tomato.user
+                                         (:require [tomato.figures :as f]))
 
-                    (defn circle [r [cx cy]]
-                     [:circle {:r  r
-                               :cx cx
-                               :cy cy}])
+                                       (defn circle [r [cx cy]]
+                                        [:circle {:r  r
+                                                  :cx cx
+                                                  :cy cy}])
 
-                    (circle 10 [10 20] 1)
-                    (ciarcle 10 [16 25])
+                                       (circle 10 [10 20] 1)
+                                       (ciarcle 10 [16 25])
 
-                    (f/->OneBezier [10 10] [39 73] [145 34] [206 16])
+                                       (f/bezier [10 10] [39 73] [145 34] [206 16])
 
-                    ")))}))
+                                       "))))}))
 
 (defonce cursor (atom nil))
 
@@ -56,9 +64,13 @@
       nil)))
 
 
-(defn maybe-figure [key str]
-  (when-let [v (maybe-read str)]
-    [:g {:key key} v]))
+(defn maybe-figure [key value]
+  [:g {:key key}
+   (js/console.log value (satisfies? f/ToSVG value))
+   (cond
+     (satisfies? f/ToSVG value) (f/to-svg value)
+     (every? #(satisfies? f/ToSVG %) value) (map f/to-svg value)
+     :default (str value))])
 
 
 (def keyed-by-first-arg {:key-fn #(identity %)})
@@ -77,7 +89,7 @@
 
 
 (rum/defc movable-circle < keyed-by-first-arg rum/reactive
-  [key drag-n-drop-target [x y] cb]
+  [key [x y] drag-n-drop-target cb]
 
   (let [color (if (= (first (rum/react drag-n-drop-target)) key)
                 "red"
@@ -107,17 +119,43 @@
         ;(handle-select snippet [pos pos])
         ))))
 
+
+(rum/defc movable-bezier < keyed-by-first-arg rum/reactive
+  [key [symb x1 c1 c2 x2] drag-n-drop-target cb]
+  (let [order [:x1 :c1 :c2 :x2]
+        vs {:x1 x1
+            :c1 c1
+            :c2 c2
+            :x2 x2}
+        make-form #(apply list symb (map % order))
+        cb' (fn [pt key new-value]
+              (cb (make-form (assoc vs pt new-value))))]
+    [:g
+     (map #(movable-circle (cons % key) (vs %) drag-n-drop-target (partial cb' % key)) order)]))
+
+(defn get-movable-selection-handler [selected-forms drag-n-drop-target]
+  (println (reverse selected-forms))
+  (first
+    (filter
+      some?
+      (for [[key {:keys [form] :as f}] (reverse selected-forms)] (do
+                                                                   (js/console.log f form)
+                                                                   (cond
+                                                                     (and (vector? form) (= (count form) 2) (every? number? form))
+                                                                     (movable-circle key form drag-n-drop-target #(replace-form! key %))
+
+                                                                     (and (list? form) (= (name (first form)) "bezier") (every? #(and (vector %) (= (count %) 2)) (rest form)))
+                                                                     (movable-bezier key form drag-n-drop-target #(replace-form! key %))
+
+                                                                     :default nil))))))
+
+
 (rum/defc selected-elements < rum/reactive
   [drag-n-drop-target]
 
-  (let [els (get-selected-forms (rum/react code-state) (rum/react cursor))]
+  (let [selected-forms (get-selected-forms (rum/react code-state) (rum/react cursor))]
     [:g
-     (for [[key {:keys [form] :as e}] els]
-       (cond
-         (and (vector? form) (= (count form) 2) (every? number? form))
-         (movable-circle key drag-n-drop-target form #(replace-form! key %))
-
-         :default nil))]))
+     (get-movable-selection-handler selected-forms drag-n-drop-target)]))
 
 (defn get-mouse-position-in-svg [e]
   (let [svg (loop [el (.-target e)]
@@ -150,7 +188,7 @@
   [:pre {:style {:background-color "#b0f0a6"
                  :max-height       "5em"
                  :padding          "2px"}}
-   (str "=> " (:value v))])
+   (str "=> " (pr-str (:value v)))])
 
 (defn show-fail [v]
   [:pre {:style {:background-color "#fe7c66"
@@ -223,9 +261,9 @@
   [:div (str (rum/react a))])
 
 (rum/defc app-area []
-  [:div {:style {:display "flex" :flex-flow "row wrap" :height "300px"}}
+  [:div {:style {:display "flex" :flex-flow "row wrap" :height "320px"}}
    [:div {:style {:flex "0 0 45%"}} (drawing-area)]
-   [:div {:style {:flex "1 1 55%" :width "200px"}} (code-editor)]
+   [:div {:style {:flex "1 1 55%" :width "200px" :overflow "scroll"}} (code-editor)]
    ;[:div {:style {:order "2"}} (dbg-atom selected-forms)]
    ])
 

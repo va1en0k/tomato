@@ -1,7 +1,13 @@
-(ns tomato.figures)
+(ns tomato.figures
+  (:require clojure.string))
 
 (defprotocol ToSVG
   (to-svg [this]))
+
+;(extend-protocol ToSVG
+;  PersistentVector
+;  (to-svg [s] s))
+
 
 (defprotocol ToPath
   (to-path [this]))
@@ -27,6 +33,8 @@
   (to-svg [this]
     (to-svg (to-path this))))
 
+(defn bezier [x1 p1 p2 x2]
+  (->OneBezier x1 p1 p2 x2))
 
 
 

@@ -17,14 +17,17 @@
       (rpl/read-eval-call
         (assoc
           (rpl/options :browser
-                     ["/src/cljs" "/js/compiled/out"]
+                     ["/js/compiled/out"]
                      tomato.eval.io/fetch-file!)
+          :no-pr-str-on-value true
           :preloads {:require '#{[tomato.figures :as f] tomato.repl}
                      ;:use '#{their-ns}
                      ;:cb #(println "Result:" %)
                      ;:ns 'tomato.user
                      })
         resolve
+        ;#(do (js/console.log %)
+        ;     (resolve %))
         ;#(if (rpl/success? %)
         ;   (resolve %)
         ;   (reject %))
