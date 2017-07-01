@@ -14,7 +14,7 @@ A programmer's interactive graphics editor.
 
   **Tomato** is a **programmer's SVG editor**. It aims to allow you to switch as
   seamlessly as possible from changing your code in your editor to moving stuff around in
-  the interactive graphical editor. The interactive features are aiming to be as
+  the interactive graphical editor - and back. The interactive features are aiming to be as
   inobtrusive as possible, so you could quickly use the code you wrote in your own app,
   whatever it is (yeah, you can always just export the image to SVG or GIF).
 
