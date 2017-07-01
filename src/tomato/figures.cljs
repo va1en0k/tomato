@@ -36,6 +36,8 @@
 (defn bezier [x1 p1 p2 x2]
   (->OneBezier x1 p1 p2 x2))
 
+(defn >+ [& vs]
+  (apply map + vs))
 
 
 ;(defrecord Circle [r [x y]]

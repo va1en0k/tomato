@@ -38,15 +38,21 @@
                                                   :cx cx
                                                   :cy cy}])
 
-                                       [:g {:fill \"red\" :stroke \"red\" :stroke-linecap \"round\"}
-                                          (let [top [116 123]
-                                                bottom [108 202]]
-                                            [(f/bezier top [60 71] [36 171] bottom)
-                                             (f/bezier top [175 74] [177 173] bottom)
-                                          ;   (f/bezier top [39 73] [145 34] [206 16])
-                                          ;   (f/bezier top [39 73] [145 34] [206 16])
+ 
+
+                                          [:g {:fill \"red\" :stroke \"red\" :stroke-linecap \"round\"}
+                                            (let [top [186 135]]
+                                          [(f/bezier top [105 76] [68 164] [155 222])
+                                          (f/bezier top [340 138] [248 216] [155 222])
+
+                                          (let [btop (>+ top [-40 0])] [:g {:fill \"white\"}
+                                          (f/bezier btop [174 144] [154 160] [135 148])
+                                          (f/bezier btop [138 126] [104 133] [135 148])
+                                          ])
+
                                           ]
-                                          )]
+                                          )
+                                          ]
 
                                        (circle 10 [10 20] 1)
                                        (ciarcle 10 [16 25])
@@ -138,6 +144,21 @@
                new-source)
         ;(handle-select snippet [pos pos])
         ))))
+;
+;(rum/defc movable-points-form < keyed-by-first-arg rum/reactive
+;  [key form drag-n-drop-target cb]
+;  (let [;form-i (map-indexed vector form)
+;        pts (filter #(and (vector? (second %))
+;                          (= (count (second %)) 2)
+;                          (every? number? (second %)))
+;                    (map-indexed vector form))
+;        ;make-form #(apply list symb (map % order))
+;        cb' (fn [ix new-value]
+;              (cb (assoc form ix new-value)))]
+;    [:g
+;     (map #(movable-circle (cons % key) (vs %) drag-n-drop-target (partial cb' % key))
+;          (filter #(and (vector? (vs %)) (= (count (vs %)) 2)) order))]))
+;
 
 
 (rum/defc movable-bezier < keyed-by-first-arg rum/reactive
@@ -148,10 +169,10 @@
             :c2 c2
             :x2 x2}
         make-form #(apply list symb (map % order))
-        cb' (fn [pt key new-value]
+        cb' (fn [pt new-value]
               (cb (make-form (assoc vs pt new-value))))]
     [:g
-     (map #(movable-circle (cons % key) (vs %) drag-n-drop-target (partial cb' % key))
+     (map #(movable-circle (cons % key) (vs %) drag-n-drop-target (partial cb' %))
           (filter #(and (vector? (vs %)) (= (count (vs %)) 2)) order))]))
 
 (defn get-movable-selection-handler [selected-forms drag-n-drop-target]
