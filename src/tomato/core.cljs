@@ -131,23 +131,23 @@
         cb' (fn [pt key new-value]
               (cb (make-form (assoc vs pt new-value))))]
     [:g
-     (map #(movable-circle (cons % key) (vs %) drag-n-drop-target (partial cb' % key)) order)]))
+     (map #(movable-circle (cons % key) (vs %) drag-n-drop-target (partial cb' % key))
+          (filter #(and (vector? (vs %)) (= (count (vs %)) 2)) order))]))
 
 (defn get-movable-selection-handler [selected-forms drag-n-drop-target]
   (println (reverse selected-forms))
   (first
     (filter
       some?
-      (for [[key {:keys [form] :as f}] (reverse selected-forms)] (do
-                                                                   (js/console.log f form)
-                                                                   (cond
-                                                                     (and (vector? form) (= (count form) 2) (every? number? form))
-                                                                     (movable-circle key form drag-n-drop-target #(replace-form! key %))
+      (for [[key {:keys [form] :as f}] (reverse selected-forms)]
+        (cond
+          (and (vector? form) (= (count form) 2) (every? number? form))
+          (movable-circle key form drag-n-drop-target #(replace-form! key %))
 
-                                                                     (and (list? form) (= (name (first form)) "bezier") (every? #(and (vector %) (= (count %) 2)) (rest form)))
-                                                                     (movable-bezier key form drag-n-drop-target #(replace-form! key %))
+          (and (list? form) (= (name (first form)) "bezier")) ; (every? #(and (vector %) (= (count %) 2)) (rest form)))
+          (movable-bezier key form drag-n-drop-target #(replace-form! key %))
 
-                                                                     :default nil))))))
+          :default nil)))))
 
 
 (rum/defc selected-elements < rum/reactive
