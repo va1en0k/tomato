@@ -38,6 +38,16 @@
                                                   :cx cx
                                                   :cy cy}])
 
+                                       [:g {:fill \"red\" :stroke \"red\" :stroke-linecap \"round\"}
+                                          (let [top [116 123]
+                                                bottom [108 202]]
+                                            [(f/bezier top [60 71] [36 171] bottom)
+                                             (f/bezier top [175 74] [177 173] bottom)
+                                          ;   (f/bezier top [39 73] [145 34] [206 16])
+                                          ;   (f/bezier top [39 73] [145 34] [206 16])
+                                          ]
+                                          )]
+
                                        (circle 10 [10 20] 1)
                                        (ciarcle 10 [16 25])
 
@@ -46,6 +56,7 @@
                                        "))))}))
 
 (defonce cursor (atom nil))
+(defonce hover (atom nil))
 
 
 (def element-values
@@ -73,11 +84,16 @@
     (map? structure) structure
     :default (str structure)))
 
-(defn maybe-figure [key value]
-  [:g {:key key}
+(def keyed-by-first-arg {:key-fn #(identity %)})
+
+
+(rum/defc maybe-figure < keyed-by-first-arg rum/reactive
+  [key value]
+  [:g {:transform (if (and (= (rum/react hover) key) (not= (first (rum/react cursor)) key))
+                    "scale(1.1)"
+                    nil)}
    (traverse-to-svg value)])
 
-(def keyed-by-first-arg {:key-fn #(identity %)})
 
 
 (defn get-selected-forms [code-state cursor]
@@ -233,7 +249,9 @@
         source (:source form)
         result (rum/react value-atom)
         error? (not (or (nil? result) (:success? result)))]
-    [:div {:style {:margin-bottom "10px"}}
+    [:div {:style {:margin-bottom "10px"}
+           :on-mouse-over #(reset! hover key)
+           :on-mouse-out #(reset! hover nil)}
      [:textarea
       {:style     {:width      "100%"
                    :height     (-> source line-count inc (* 1.1) (min 10) (str "em"))

@@ -27,12 +27,15 @@ A programmer's interactive graphics editor.
 ## Todos
 
 * Library features
-    * satisfies vs extends???
+    * complex bezier types
+    * convert any shape to bezier
+    * Color
 
 * Editor features
-    * Hover code cell to highlight
+    * ~~Hover code cell to highlight~~
     * Time
     * Randomness
+    * Color
     * Export as SVG, GIF, CLJ
     * Gallery, save to gist
     * JavaScript
