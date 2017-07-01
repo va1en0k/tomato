@@ -6,6 +6,7 @@
             [cljsjs.parinfer]
             [linked.core :as linked]
             [clojure.string]
+            [clojure.walk]
 
             [tomato.eval :as ev]
             [tomato.figures :as f]))
@@ -64,14 +65,17 @@
       nil)))
 
 
+(defn traverse-to-svg [structure]
+  (cond
+    (vector? structure) (vec (map traverse-to-svg structure))
+    (keyword? structure) structure
+    (satisfies? f/ToSVG structure) (f/to-svg structure)
+    (map? structure) structure
+    :default (str structure)))
+
 (defn maybe-figure [key value]
   [:g {:key key}
-   (js/console.log value (satisfies? f/ToSVG value))
-   (cond
-     (satisfies? f/ToSVG value) (f/to-svg value)
-     (every? #(satisfies? f/ToSVG %) value) (map f/to-svg value)
-     :default (str value))])
-
+   (traverse-to-svg value)])
 
 (def keyed-by-first-arg {:key-fn #(identity %)})
 
