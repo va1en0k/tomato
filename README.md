@@ -9,20 +9,21 @@ FIXME: Write a paragraph about the library/project and highlight its goals.
 ## Todos
 
 * Library features
-** satisfies vs extends???
+    * satisfies vs extends???
 
 * Editor features
-** Time
-** Randomness
+    * Time
+    * Randomness
+    * JavaScript
 
 * Architecture
-** Decouple the library from the editor
+    * Decouple the library from the editor
 
 * Performance
-** Don't re-eval the unchanged
-** Debounce evals
-** Put evals into workers
-** Maybe find thus a way to interrupt a computation
+    * Don't re-eval the unchanged
+    * Debounce evals
+    * Put evals into workers
+    * Maybe find thus a way to interrupt a computation
 
 ## Setup
 
